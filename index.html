@@ -1,11 +1,47 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+    <script
+        src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
+    <script
+        src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+    <!-- <style>
+        #captureButton,
+        #shareButton {
+            position: absolute;
+            padding: 10px;
+            background: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.1s;
+            z-index: 1000;
+        }
+
+        #captureButton:active,
+        #shareButton:active {
+            background-color: #e0e0e0;
+        }
+
+        #captureButton {
+            top: 10px;
+            right: 10px;
+        }
+
+        #shareButton {
+            top: 60px;
+            right: 10px;
+        }
+
+        #captureButton img,
+        #shareButton img {
+            width: 15px;
+            height: 15px;
+        } 
+    </style>-->
 </head>
 
 <body style="margin: 0; overflow: hidden;">
@@ -27,136 +63,119 @@
         <a-entity camera></a-entity>
     </a-scene>
 
-    <button id="recordButton"
-        style="position: absolute; top: 10px; right: 70px; z-index: 1000; padding: 10px; background: white; border: none; cursor: pointer;">
-        Start Recording
+    <!-- Capture Button with Camera PNG -->
+    <button id="captureButton"
+        style="position: absolute; top: 20px; right: 10px; z-index: 1000; padding: 12px; background: white; border: none; cursor: pointer; transition: background-color 0.1s; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+        onmousedown="this.style.backgroundColor='#e0e0e0';" onmouseup="this.style.backgroundColor='white';"
+        onmouseleave="this.style.backgroundColor='white';">
+        <img src="assets/camera.png" alt="Capture" style="width: 24px; height: 24px;">
     </button>
-    <button id="shareButton" disabled
-        style="position: absolute; top: 10px; right: 10px; z-index: 1000; padding: 10px; background: white; border: none; cursor: pointer;">
-        Share
+
+    <!-- Share Button with Share PNG -->
+    <button id="shareButton"
+        style="position: absolute; top: 80px; right: 10px; z-index: 1000; padding: 12px; background: white; border: none; cursor: pointer; transition: background-color 0.1s; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+        onmousedown="this.style.backgroundColor='#e0e0e0';" onmouseup="this.style.backgroundColor='white';"
+        onmouseleave="this.style.backgroundColor='white';">
+        <img src="assets/share.png" alt="Share" style="width: 24px; height: 24px;">
     </button>
 
     <script>
         const scene = document.querySelector('a-scene');
-        let lastVideoBlob = null;
-        let mediaRecorder;
-        let recordedChunks = [];
-        let isRecording = false;
-
         scene.addEventListener('loaded', function () {
             console.log("Scene loaded, setting up buttons.");
 
-            const recordButton = document.getElementById('recordButton');
+            // Capture Button Setup
+            const captureButton = document.getElementById('captureButton');
+            captureButton.addEventListener('click', captureScreenshot);
+
+            // Share Button Setup
             const shareButton = document.getElementById('shareButton');
+            shareButton.addEventListener('click', sharePageLink);
 
-            recordButton.addEventListener('click', toggleRecording);
-            shareButton.addEventListener('click', shareVideo);
-
-            async function toggleRecording() {
-                if (!isRecording) {
-                    startRecording();
-                } else {
-                    stopRecording();
-                }
-            }
-
-            async function startRecording() {
+            async function captureScreenshot() {
                 try {
                     const renderer = scene.renderer;
                     const video = document.querySelector('video');
-                    const arCanvas = renderer.domElement;
 
-                    if (!renderer || !video) {
-                        throw new Error("Required elements not initialized.");
+                    if (!renderer) {
+                        throw new Error("Renderer not initialized.");
                     }
 
+                    let imgData;
                     const tempCanvas = document.createElement('canvas');
                     const tempCtx = tempCanvas.getContext('2d');
+                    const arCanvas = renderer.domElement;
+
                     tempCanvas.width = arCanvas.width;
                     tempCanvas.height = arCanvas.height;
 
-                    const canvasStream = tempCanvas.captureStream(30);
-
-                    recordedChunks = [];
-                    mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm' });
-                    
-                    mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0) {
-                            recordedChunks.push(event.data);
-                        }
-                    };
-
-                    mediaRecorder.onstop = () => {
-                        lastVideoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-                        downloadVideo(lastVideoBlob);
-                        shareButton.disabled = false;
-                    };
-
-                    function animate() {
-                        if (mediaRecorder.state === 'recording') {
-                            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                            renderer.render(scene.object3D, scene.camera);
-                            tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-                            requestAnimationFrame(animate);
-                        }
+                    if (!video) {
+                        console.warn("Video feed not found, capturing AR content only.");
+                        renderer.render(scene.object3D, scene.camera);
+                        imgData = renderer.domElement.toDataURL('image/png');
+                    } else {
+                        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                        renderer.render(scene.object3D, scene.camera);
+                        tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                        imgData = tempCanvas.toDataURL('image/png');
                     }
 
-                    mediaRecorder.start();
-                    isRecording = true;
-                    recordButton.textContent = 'Stop Recording';
-                    animate();
+                    // Download the screenshot
+                    downloadImage(imgData);
 
+                    // Ask to share screenshot
+                    if (navigator.share && confirm("Would you like to share this screenshot?")) {
+                        const response = await fetch(imgData);
+                        const blob = await response.blob();
+                        const file = new File([blob], `ar-screenshot-${Date.now()}.png`, { type: 'image/png' });
+
+                        const shareData = {
+                            files: [file],
+                            title: 'AR Screenshot',
+                            text: 'Check out my AR screenshot!'
+                        };
+
+                        try {
+                            await navigator.share(shareData);
+                            console.log("Screenshot shared successfully!");
+                        } catch (err) {
+                            console.error("Error sharing screenshot:", err);
+                            alert("Failed to share. The screenshot has been downloaded instead.");
+                        }
+                    }
                 } catch (error) {
-                    console.error("Error starting recording:", error);
-                    alert("Failed to start recording. Check the console for details.");
-                    isRecording = false;
-                    recordButton.textContent = 'Start Recording';
+                    console.error("Error capturing screenshot:", error);
+                    alert("Failed to capture screenshot. Check the console for details.");
                 }
             }
 
-            function stopRecording() {
-                if (mediaRecorder && mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
-                    isRecording = false;
-                    recordButton.textContent = 'Start Recording';
+            async function sharePageLink() {
+                if (navigator.share) {
+                    const shareData = {
+                        url: window.location.href,
+                        title: 'AR Experience',
+                        text: 'Check out this cool AR experience!'
+                    };
+
+                    try {
+                        await navigator.share(shareData);
+                        console.log("Page link shared successfully!");
+                    } catch (err) {
+                        console.error("Error sharing page link:", err);
+                        alert("Failed to share the page link.");
+                    }
+                } else {
+                    alert("Sharing is not supported in this browser.");
                 }
             }
 
-            function shareVideo() {
-                if (!lastVideoBlob) {
-                    alert("No video available to share. Record a video first!");
-                    return;
-                }
-
-                if (!navigator.share) {
-                    alert("Sharing is not supported in this browser. Use the downloaded video instead.");
-                    return;
-                }
-
-                const file = new File([lastVideoBlob], 'ar-video.webm', { type: 'video/webm' });
-                const shareData = {
-                    files: [file],
-                    title: 'AR Video',
-                    text: 'Check out my AR video recording!'
-                };
-
-                navigator.share(shareData)
-                    .then(() => console.log("Video shared successfully!"))
-                    .catch(err => {
-                        console.error("Error sharing video:", err);
-                        alert("Failed to share. Use the downloaded video instead.");
-                    });
-            }
-
-            function downloadVideo(blob) {
-                const url = URL.createObjectURL(blob);
+            function downloadImage(imgData) {
                 const link = document.createElement('a');
-                link.href = url;
-                link.download = 'ar-video.webm';
+                link.href = imgData;
+                link.download = 'ar-screenshot.png';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                URL.revokeObjectURL(url);
             }
         });
 
@@ -165,4 +184,5 @@
         });
     </script>
 </body>
+
 </html>
