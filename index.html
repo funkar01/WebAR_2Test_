@@ -27,9 +27,9 @@
         <a-entity camera></a-entity>
     </a-scene>
 
-    <button id="screenshotButton"
+    <button id="recordButton"
         style="position: absolute; top: 10px; right: 70px; z-index: 1000; padding: 10px; background: white; border: none; cursor: pointer;">
-        Take Screenshot
+        Record Video
     </button>
     <button id="shareButton" disabled
         style="position: absolute; top: 10px; right: 10px; z-index: 1000; padding: 10px; background: white; border: none; cursor: pointer;">
@@ -38,97 +38,118 @@
 
     <script>
         const scene = document.querySelector('a-scene');
-        let lastScreenshotData = null; // Store the last screenshot for sharing
+        let lastVideoBlob = null; // Store the last recorded video for sharing
+        let mediaRecorder;
+        let recordedChunks = [];
 
         scene.addEventListener('loaded', function () {
             console.log("Scene loaded, setting up buttons.");
 
-            const screenshotButton = document.getElementById('screenshotButton');
+            const recordButton = document.getElementById('recordButton');
             const shareButton = document.getElementById('shareButton');
 
-            screenshotButton.addEventListener('click', takeScreenshot);
-            shareButton.addEventListener('click', shareScreenshot);
+            recordButton.addEventListener('click', startRecording);
+            shareButton.addEventListener('click', shareVideo);
 
-            function takeScreenshot() {
+            async function startRecording() {
                 try {
                     const renderer = scene.renderer;
                     const video = document.querySelector('video');
-
-                    if (!renderer) {
-                        throw new Error("Renderer not initialized.");
-                    }
-
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
                     const arCanvas = renderer.domElement;
 
+                    if (!renderer || !video) {
+                        throw new Error("Required elements not initialized.");
+                    }
+
+                    // Create a canvas to combine video and AR content
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
                     tempCanvas.width = arCanvas.width;
                     tempCanvas.height = arCanvas.height;
 
-                    if (video) {
-                        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                    } else {
-                        console.warn("Video feed not found, capturing AR content only.");
+                    // Get the canvas stream
+                    const canvasStream = tempCanvas.captureStream(30); // 30 FPS
+
+                    // Record for 10 seconds
+                    recordedChunks = [];
+                    mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm' });
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        lastVideoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                        downloadVideo(lastVideoBlob);
+                        shareButton.disabled = false;
+                    };
+
+                    // Animation function to render AR content onto canvas
+                    function animate() {
+                        if (mediaRecorder.state === 'recording') {
+                            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                            renderer.render(scene.object3D, scene.camera);
+                            tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                            requestAnimationFrame(animate);
+                        }
                     }
 
-                    renderer.render(scene.object3D, scene.camera);
-                    tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                    mediaRecorder.start();
+                    recordButton.disabled = true;
+                    animate();
 
-                    const imgData = tempCanvas.toDataURL('image/png');
-                    lastScreenshotData = imgData; // Store for sharing
-                    downloadImage(imgData);
-
-                    // Enable the share button after a screenshot is taken
-                    shareButton.disabled = false;
+                    // Stop after 10 seconds
+                    setTimeout(() => {
+                        if (mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                            recordButton.disabled = false;
+                        }
+                    }, 10000);
 
                 } catch (error) {
-                    console.error("Error taking screenshot:", error);
-                    alert("Failed to take screenshot. Check the console for details.");
+                    console.error("Error starting recording:", error);
+                    alert("Failed to start recording. Check the console for details.");
+                    recordButton.disabled = false;
                 }
             }
 
-            function shareScreenshot() {
-                if (!lastScreenshotData) {
-                    alert("No screenshot available to share. Take a screenshot first!");
+            function shareVideo() {
+                if (!lastVideoBlob) {
+                    alert("No video available to share. Record a video first!");
                     return;
                 }
 
                 if (!navigator.share) {
-                    alert("Sharing is not supported in this browser. Use the downloaded image instead.");
+                    alert("Sharing is not supported in this browser. Use the downloaded video instead.");
                     return;
                 }
 
-                // Convert data URL to blob
-                fetch(lastScreenshotData)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        const file = new File([blob], 'screenshot.png', { type: 'image/png' });
-                        const shareData = {
-                            files: [file],
-                            title: 'AR Screenshot',
-                            text: 'Check out my AR screenshot!'
-                        };
+                const file = new File([lastVideoBlob], 'ar-video.webm', { type: 'video/webm' });
+                const shareData = {
+                    files: [file],
+                    title: 'AR Video',
+                    text: 'Check out my AR video recording!'
+                };
 
-                        navigator.share(shareData)
-                            .then(() => console.log("Screenshot shared successfully!"))
-                            .catch(err => {
-                                console.error("Error sharing screenshot:", err);
-                                alert("Failed to share. Use the downloaded image instead.");
-                            });
-                    })
+                navigator.share(shareData)
+                    .then(() => console.log("Video shared successfully!"))
                     .catch(err => {
-                        console.error("Error converting image to blob:", err);
-                        alert("Failed to prepare image for sharing.");
+                        console.error("Error sharing video:", err);
+                        alert("Failed to share. Use the downloaded video instead.");
                     });
             }
 
-            function downloadImage(imgData) {
+            function downloadVideo(blob) {
+                const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = imgData;
-                link.download = 'screenshot.png';
+                link.href = url;
+                link.download = 'ar-video.webm';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                URL.revokeObjectURL(url);
             }
         });
 
