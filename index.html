@@ -91,61 +91,63 @@
             // Share Button Setup
             const shareButton = document.getElementById('shareButton');
             shareButton.addEventListener('click', sharePageLink);
-
             async function captureScreenshot() {
                 try {
                     const renderer = scene.renderer;
                     const video = document.querySelector('video');
 
-                    if (!renderer) {
-                        throw new Error("Renderer not initialized.");
-                    }
+                    if (!renderer) throw new Error("Renderer not initialized.");
 
-                    let imgData;
                     const tempCanvas = document.createElement('canvas');
                     const tempCtx = tempCanvas.getContext('2d');
-                    const arCanvas = renderer.domElement;
 
-                    tempCanvas.width = arCanvas.width;
-                    tempCanvas.height = arCanvas.height;
+                    // Set canvas to match device screen dimensions
+                    tempCanvas.width = window.innerWidth * window.devicePixelRatio;
+                    tempCanvas.height = window.innerHeight * window.devicePixelRatio;
 
-                    if (!video) {
-                        console.warn("Video feed not found, capturing AR content only.");
-                        renderer.render(scene.object3D, scene.camera);
-                        imgData = renderer.domElement.toDataURL('image/png');
-                    } else {
-                        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                        renderer.render(scene.object3D, scene.camera);
-                        tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
-                        imgData = tempCanvas.toDataURL('image/png');
+                    // Sync renderer size
+                    renderer.setSize(tempCanvas.width, tempCanvas.height);
+
+                    if (video) {
+                        const videoAspect = video.videoWidth / video.videoHeight;
+                        const canvasAspect = tempCanvas.width / tempCanvas.height;
+                        let drawWidth, drawHeight, offsetX, offsetY;
+
+                        if (videoAspect > canvasAspect) {
+                            drawWidth = tempCanvas.height * videoAspect;
+                            drawHeight = tempCanvas.height;
+                            offsetX = (tempCanvas.width - drawWidth) / 2;
+                            offsetY = 0;
+                        } else {
+                            drawWidth = tempCanvas.width;
+                            drawHeight = tempCanvas.width / videoAspect;
+                            offsetX = 0;
+                            offsetY = (tempCanvas.height - drawHeight) / 2;
+                        }
+                        tempCtx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
                     }
 
-                    // Download the screenshot
+                    renderer.render(scene.object3D, scene.camera);
+                    tempCtx.drawImage(renderer.domElement, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                    const imgData = tempCanvas.toDataURL('image/png');
                     downloadImage(imgData);
 
-                    // Ask to share screenshot
                     if (navigator.share && confirm("Would you like to share this screenshot?")) {
                         const response = await fetch(imgData);
                         const blob = await response.blob();
                         const file = new File([blob], `ar-screenshot-${Date.now()}.png`, { type: 'image/png' });
-
                         const shareData = {
                             files: [file],
                             title: 'AR Screenshot',
                             text: 'Check out my AR screenshot!'
                         };
-
-                        try {
-                            await navigator.share(shareData);
-                            console.log("Screenshot shared successfully!");
-                        } catch (err) {
-                            console.error("Error sharing screenshot:", err);
-                            alert("Failed to share. The screenshot has been downloaded instead.");
-                        }
+                        await navigator.share(shareData);
+                        console.log("Screenshot shared successfully!");
                     }
                 } catch (error) {
                     console.error("Error capturing screenshot:", error);
-                    alert("Failed to capture screenshot. Check the console for details.");
+                    alert("Failed to capture screenshot.");
                 }
             }
 
