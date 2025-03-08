@@ -52,16 +52,15 @@
                         throw new Error("Renderer not initialized.");
                     }
 
-                    // Get the aspect ratio of the screen
-                    const aspectRatio = window.innerWidth / window.innerHeight;
+                    const arCanvas = renderer.domElement; // Get AR.js canvas
+                    const aspectRatio = arCanvas.width / arCanvas.height; // Get canvas aspect ratio
 
-                    // Set canvas size dynamically
+                    // Create a temporary canvas with the same aspect ratio as AR.js canvas
                     const tempCanvas = document.createElement('canvas');
                     const tempCtx = tempCanvas.getContext('2d');
-                    const arCanvas = renderer.domElement;
 
                     tempCanvas.width = arCanvas.width;
-                    tempCanvas.height = tempCanvas.width / aspectRatio; // Adjust height based on aspect ratio
+                    tempCanvas.height = arCanvas.height; // Maintain AR scene's aspect ratio
 
                     if (video) {
                         tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
