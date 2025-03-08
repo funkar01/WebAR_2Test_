@@ -1,14 +1,11 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-    <script
-        src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
-    <script
-        src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
 </head>
 
 <body style="margin: 0; overflow: hidden;">
@@ -43,31 +40,36 @@
             const screenshotButton = document.getElementById('screenshotButton');
             screenshotButton.addEventListener('click', takeScreenshot);
 
-
             function takeScreenshot() {
                 try {
                     const renderer = scene.renderer;
+                    // Query the video element directly from the DOM
                     const video = document.querySelector('video');
 
                     if (!renderer) {
                         throw new Error("Renderer not initialized.");
                     }
 
-                    const arCanvas = renderer.domElement; // Get AR.js canvas
-                    const aspectRatio = arCanvas.width / arCanvas.height; // Get canvas aspect ratio
-
-                    // Create a temporary canvas with the same aspect ratio as AR.js canvas
-                    const tempCanvas = document.createElement('canvas');
-                    
-                    tempCanvas.width = window.screen.width;
-                    tempCanvas.height = window.screen.height;; // Maintain AR scene's aspect ratio
-                    const tempCtx = tempCanvas.getContext('2d');
-
-                    if (video) {
-                        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                    if (!video) {
+                        console.warn("Video feed not found, capturing AR content only.");
+                        renderer.render(scene.object3D, scene.camera);
+                        const imgData = renderer.domElement.toDataURL('image/png');
+                        downloadImage(imgData);
+                        return;
                     }
 
-                    // Render AR content and overlay it
+                    // Create a temporary canvas for compositing
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    const arCanvas = renderer.domElement;
+
+                    tempCanvas.width = arCanvas.height;
+                    tempCanvas.height = arCanvas.width;
+
+                    // Draw the video feed first
+                    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                    // Render and draw the AR content
                     renderer.render(scene.object3D, scene.camera);
                     tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
 
@@ -80,7 +82,6 @@
                     alert("Failed to take screenshot. Check the console for details.");
                 }
             }
-
 
             function downloadImage(imgData) {
                 const link = document.createElement('a');
@@ -97,5 +98,4 @@
         });
     </script>
 </body>
-
 </html>
