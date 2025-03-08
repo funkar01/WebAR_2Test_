@@ -74,7 +74,7 @@
 
                     // Render and draw the AR content
                     renderer.render(scene.object3D, scene.camera);
-                    tempCtx.drawImage(arCanvas, -tempCanvas.width * arCanvas.width / window.screen.width, 0, tempCanvas.width, tempCanvas.height);
+                    tempCtx.drawImage(arCanvas, -(arCanvas.width / window.screen.width), 0, tempCanvas.width, tempCanvas.height);
 
                     // Generate and download the screenshot
                     const imgData = tempCanvas.toDataURL('image/png');
