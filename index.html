@@ -105,7 +105,7 @@
 
                     tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
                     renderer.render(scene.object3D, scene.camera);
-                    tempCtx.drawImage(arCanvas, - canvasWidth, 0 + canvasHeight, tempCanvas.height, tempCanvas.width);
+                    tempCtx.drawImage(arCanvas, 0, 0 + canvasHeight, tempCanvas.height, tempCanvas.width);
 
         const imgData = tempCanvas.toDataURL('image/png');
         downloadImage(imgData);
