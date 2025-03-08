@@ -43,6 +43,7 @@
             const screenshotButton = document.getElementById('screenshotButton');
             screenshotButton.addEventListener('click', takeScreenshot);
 
+
             function takeScreenshot() {
                 try {
                     const renderer = scene.renderer;
@@ -59,8 +60,8 @@
                     const tempCanvas = document.createElement('canvas');
                     const tempCtx = tempCanvas.getContext('2d');
 
-                    tempCanvas.width = arCanvas.width;
-                    tempCanvas.height = arCanvas.height; // Maintain AR scene's aspect ratio
+                    tempCanvas.width = arCanvas.height;
+                    tempCanvas.height = arCanvas.width; // Maintain AR scene's aspect ratio
 
                     if (video) {
                         tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
