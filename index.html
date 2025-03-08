@@ -80,50 +80,52 @@
             window.addEventListener('resize', updateDimensions);
 
             function takeScreenshot() {
-                try {
-                    const renderer = scene.renderer;
-                    const video = document.querySelector('video');
+    try {
+        const renderer = scene.renderer;
+        const video = document.querySelector('video');
 
-                    if (!renderer) {
-                        throw new Error("Renderer not initialized.");
-                    }
+        if (!renderer) {
+            throw new Error("Renderer not initialized.");
+        }
 
-                    if (!video) {
-                        console.warn("Video feed not found, capturing AR content only.");
-                        renderer.render(scene.object3D, scene.camera);
-                        const imgData = renderer.domElement.toDataURL('image/png');
-                        downloadImage(imgData);
-                        return;
-                    }
+        const arCanvas = renderer.domElement;
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
 
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    const arCanvas = renderer.domElement;
+        // Use the AR canvas size to maintain correct aspect ratio
+        tempCanvas.width = arCanvas.width;
+        tempCanvas.height = arCanvas.height;
 
-                    tempCanvas.width = arCanvas.height;
-                    tempCanvas.height = arCanvas.width;
+        // Capture video frame if available
+        if (video) {
+            tempCtx.drawImage(video, 0, 0, tempCanvas.height, tempCanvas.width);
+        } else {
+            console.warn("Video feed not found, capturing AR content only.");
+        }
 
-                    tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-                    renderer.render(scene.object3D, scene.camera);
-                    tempCtx.drawImage(arCanvas, 0, 0 + canvasHeight, tempCanvas.height, tempCanvas.width);
+        // Ensure AR content is properly rendered before drawing it
+        renderer.render(scene.object3D, scene.camera);
+        tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.height, tempCanvas.width);
 
+        // Convert to image and download
         const imgData = tempCanvas.toDataURL('image/png');
         downloadImage(imgData);
 
-                } catch (error) {
-            console.error("Error taking screenshot:", error);
-            alert("Failed to take screenshot. Check the console for details.");
-        }
-            }
+    } catch (error) {
+        console.error("Error taking screenshot:", error);
+        alert("Failed to take screenshot. Check the console for details.");
+    }
+}
 
-        function downloadImage(imgData) {
-            const link = document.createElement('a');
-            link.href = imgData;
-            link.download = 'screenshot.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+
+            function downloadImage(imgData) {
+                const link = document.createElement('a');
+                link.href = imgData;
+                link.download = 'screenshot.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         });
 
         scene.addEventListener('loaderror', function (event) {
