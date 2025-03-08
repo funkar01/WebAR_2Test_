@@ -49,6 +49,7 @@
     <div id="infoPanel">
         <p>Window: <span id="windowSize"></span></p>
         <p>AR Canvas: <span id="canvasSize"></span></p>
+        <p>AR position changed 10: </p>
     </div>
 
     <script>
@@ -105,7 +106,7 @@
 
         // Ensure AR content is properly rendered before drawing it
         renderer.render(scene.object3D, scene.camera);
-        tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.height, tempCanvas.width);
+        tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
 
         // Convert to image and download
         const imgData = tempCanvas.toDataURL('image/png');
