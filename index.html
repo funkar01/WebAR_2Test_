@@ -9,6 +9,17 @@
         src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
     <script
         src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+    <style>
+        #infoPanel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            z-index: 1000;
+        }
+    </style>
 </head>
 
 <body style="margin: 0; overflow: hidden;">
@@ -35,18 +46,42 @@
         Take Screenshot
     </button>
 
+    <div id="infoPanel">
+        <p>Window: <span id="windowSize"></span></p>
+        <p>AR Canvas: <span id="canvasSize"></span></p>
+    </div>
+
     <script>
         const scene = document.querySelector('a-scene');
         scene.addEventListener('loaded', function () {
-            console.log("Scene loaded, setting up screenshot button.");
+            console.log("Scene loaded, setting up screenshot button and info display.");
 
             const screenshotButton = document.getElementById('screenshotButton');
             screenshotButton.addEventListener('click', takeScreenshot);
 
+            const windowSizeDisplay = document.getElementById('windowSize');
+            const canvasSizeDisplay = document.getElementById('canvasSize');
+
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const arCanvas = scene.renderer.domElement;
+            const canvasWidth = arCanvas.width;
+            const canvasHeight = arCanvas.height;
+            function updateDimensions() {
+
+                windowSizeDisplay.textContent = `${windowWidth}x${windowHeight}px`;
+                canvasSizeDisplay.textContent = `${canvasWidth}x${canvasHeight}px`;
+            }
+
+            // Initial update
+            updateDimensions();
+
+            // Update on window resize
+            window.addEventListener('resize', updateDimensions);
+
             function takeScreenshot() {
                 try {
                     const renderer = scene.renderer;
-                    // Query the video element directly from the DOM
                     const video = document.querySelector('video');
 
                     if (!renderer) {
@@ -61,7 +96,6 @@
                         return;
                     }
 
-                    // Create a temporary canvas for compositing
                     const tempCanvas = document.createElement('canvas');
                     const tempCtx = tempCanvas.getContext('2d');
                     const arCanvas = renderer.domElement;
@@ -69,31 +103,27 @@
                     tempCanvas.width = arCanvas.height;
                     tempCanvas.height = arCanvas.width;
 
-                    // Draw the video feed first
                     tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-
-                    // Render and draw the AR content
                     renderer.render(scene.object3D, scene.camera);
-                    tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.height, tempCanvas.width );
+                    tempCtx.drawImage(arCanvas, - canvasWidth, canvasHeight, tempCanvas.height, tempCanvas.width);
 
-                    // Generate and download the screenshot
-                    const imgData = tempCanvas.toDataURL('image/png');
-                    downloadImage(imgData);
+        const imgData = tempCanvas.toDataURL('image/png');
+        downloadImage(imgData);
 
                 } catch (error) {
-                    console.error("Error taking screenshot:", error);
-                    alert("Failed to take screenshot. Check the console for details.");
-                }
+            console.error("Error taking screenshot:", error);
+            alert("Failed to take screenshot. Check the console for details.");
+        }
             }
 
-            function downloadImage(imgData) {
-                const link = document.createElement('a');
-                link.href = imgData;
-                link.download = 'screenshot.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
+        function downloadImage(imgData) {
+            const link = document.createElement('a');
+            link.href = imgData;
+            link.download = 'screenshot.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         });
 
         scene.addEventListener('loaderror', function (event) {
