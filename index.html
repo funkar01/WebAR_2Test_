@@ -9,39 +9,6 @@
         src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
     <script
         src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
-    <!-- <style>
-        #captureButton,
-        #shareButton {
-            position: absolute;
-            padding: 10px;
-            background: white;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.1s;
-            z-index: 1000;
-        }
-
-        #captureButton:active,
-        #shareButton:active {
-            background-color: #e0e0e0;
-        }
-
-        #captureButton {
-            top: 10px;
-            right: 10px;
-        }
-
-        #shareButton {
-            top: 60px;
-            right: 10px;
-        }
-
-        #captureButton img,
-        #shareButton img {
-            width: 15px;
-            height: 15px;
-        } 
-    </style>-->
 </head>
 
 <body style="margin: 0; overflow: hidden;">
@@ -63,118 +30,62 @@
         <a-entity camera></a-entity>
     </a-scene>
 
-    <!-- Capture Button with Camera PNG -->
-    <button id="captureButton"
-        style="position: absolute; top: 20px; right: 10px; z-index: 1000; padding: 12px; background: white; border: none; cursor: pointer; transition: background-color 0.1s; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-        onmousedown="this.style.backgroundColor='#e0e0e0';" onmouseup="this.style.backgroundColor='white';"
-        onmouseleave="this.style.backgroundColor='white';">
-        <img src="assets/camera.png" alt="Capture" style="width: 24px; height: 24px;">
-    </button>
-
-    <!-- Share Button with Share PNG -->
-    <button id="shareButton"
-        style="position: absolute; top: 80px; right: 10px; z-index: 1000; padding: 12px; background: white; border: none; cursor: pointer; transition: background-color 0.1s; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-        onmousedown="this.style.backgroundColor='#e0e0e0';" onmouseup="this.style.backgroundColor='white';"
-        onmouseleave="this.style.backgroundColor='white';">
-        <img src="assets/share.png" alt="Share" style="width: 24px; height: 24px;">
+    <button id="screenshotButton"
+        style="position: absolute; top: 10px; right: 10px; z-index: 1000; padding: 10px; background: white; border: none; cursor: pointer;">
+        Take Screenshot
     </button>
 
     <script>
         const scene = document.querySelector('a-scene');
         scene.addEventListener('loaded', function () {
-            console.log("Scene loaded, setting up buttons.");
+            console.log("Scene loaded, setting up screenshot button.");
 
-            // Capture Button Setup
-            const captureButton = document.getElementById('captureButton');
-            captureButton.addEventListener('click', captureScreenshot);
+            const screenshotButton = document.getElementById('screenshotButton');
+            screenshotButton.addEventListener('click', takeScreenshot);
 
-            // Share Button Setup
-            const shareButton = document.getElementById('shareButton');
-            shareButton.addEventListener('click', sharePageLink);
-            async function captureScreenshot() {
+            function takeScreenshot() {
                 try {
                     const renderer = scene.renderer;
                     const video = document.querySelector('video');
 
-                    if (!renderer) throw new Error("Renderer not initialized.");
-
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-
-                    // Set canvas to match device screen dimensions
-                    tempCanvas.width = window.innerWidth * window.devicePixelRatio;
-                    tempCanvas.height = window.innerHeight * window.devicePixelRatio;
-
-                    // Sync renderer size
-                    renderer.setSize(tempCanvas.width, tempCanvas.height);
-
-                    if (video) {
-                        const videoAspect = video.videoWidth / video.videoHeight;
-                        const canvasAspect = tempCanvas.width / tempCanvas.height;
-                        let drawWidth, drawHeight, offsetX, offsetY;
-
-                        if (videoAspect > canvasAspect) {
-                            drawWidth = tempCanvas.height * videoAspect;
-                            drawHeight = tempCanvas.height;
-                            offsetX = (tempCanvas.width - drawWidth) / 2;
-                            offsetY = 0;
-                        } else {
-                            drawWidth = tempCanvas.width;
-                            drawHeight = tempCanvas.width / videoAspect;
-                            offsetX = 0;
-                            offsetY = (tempCanvas.height - drawHeight) / 2;
-                        }
-                        tempCtx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+                    if (!renderer) {
+                        throw new Error("Renderer not initialized.");
                     }
 
-                    renderer.render(scene.object3D, scene.camera);
-                    tempCtx.drawImage(renderer.domElement, 0, 0, tempCanvas.width, tempCanvas.height);
+                    // Get the aspect ratio of the screen
+                    const aspectRatio = window.innerWidth / window.innerHeight;
 
+                    // Set canvas size dynamically
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    const arCanvas = renderer.domElement;
+
+                    tempCanvas.width = arCanvas.width;
+                    tempCanvas.height = tempCanvas.width / aspectRatio; // Adjust height based on aspect ratio
+
+                    if (video) {
+                        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                    }
+
+                    // Render AR content and overlay it
+                    renderer.render(scene.object3D, scene.camera);
+                    tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                    // Generate and download the screenshot
                     const imgData = tempCanvas.toDataURL('image/png');
                     downloadImage(imgData);
 
-                    if (navigator.share && confirm("Would you like to share this screenshot?")) {
-                        const response = await fetch(imgData);
-                        const blob = await response.blob();
-                        const file = new File([blob], `ar-screenshot-${Date.now()}.png`, { type: 'image/png' });
-                        const shareData = {
-                            files: [file],
-                            title: 'AR Screenshot',
-                            text: 'Check out my AR screenshot!'
-                        };
-                        await navigator.share(shareData);
-                        console.log("Screenshot shared successfully!");
-                    }
                 } catch (error) {
-                    console.error("Error capturing screenshot:", error);
-                    alert("Failed to capture screenshot.");
+                    console.error("Error taking screenshot:", error);
+                    alert("Failed to take screenshot. Check the console for details.");
                 }
             }
 
-            async function sharePageLink() {
-                if (navigator.share) {
-                    const shareData = {
-                        url: window.location.href,
-                        title: 'AR Experience',
-                        text: 'Check out this cool AR experience!'
-                    };
-
-                    try {
-                        await navigator.share(shareData);
-                        console.log("Page link shared successfully!");
-                    } catch (err) {
-                        console.error("Error sharing page link:", err);
-                        alert("Failed to share the page link.");
-                    }
-                } else {
-                    alert("Sharing is not supported in this browser.");
-                }
-            }
 
             function downloadImage(imgData) {
                 const link = document.createElement('a');
                 link.href = imgData;
-                link.download = 'ar-screenshot.png';
+                link.download = 'screenshot.png';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
