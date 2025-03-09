@@ -49,7 +49,7 @@
     <div id="infoPanel">
         <p>Window: <span id="windowSize"></span></p>
         <p>AR Canvas: <span id="canvasSize"></span></p>
-        <p>Aspect ratio_2: </p>
+        <p>Aspect ratio_3: </p>
     </div>
 
     <script>
@@ -123,9 +123,9 @@
                         console.warn("Video feed not found or not ready, capturing AR content only.");
                     }
 
-                    // Ensure AR content is properly rendered before drawing it
+                    // Render AR content **at exact size** without scaling down
                     renderer.render(scene.object3D, scene.camera);
-                    tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                    tempCtx.drawImage(arCanvas, 0, 0, arCanvas.width, arCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height);
 
                     // Convert to image and download
                     const imgData = tempCanvas.toDataURL('image/png');
@@ -136,6 +136,7 @@
                     alert("Failed to take screenshot. Check the console for details.");
                 }
             }
+
 
 
 
