@@ -49,7 +49,7 @@
     <div id="infoPanel">
         <p>Window: <span id="windowSize"></span></p>
         <p>AR Canvas: <span id="canvasSize"></span></p>
-        <p>AR position changed 10: </p>
+        <p>AR position changed 11: </p>
     </div>
 
     <script>
@@ -94,12 +94,12 @@
         const tempCtx = tempCanvas.getContext('2d');
 
         // Use the AR canvas size to maintain correct aspect ratio
-        tempCanvas.width = arCanvas.width;
-        tempCanvas.height = arCanvas.height;
+        tempCanvas.width = arCanvas.height;
+        tempCanvas.height = arCanvas.width;
 
         // Capture video frame if available
         if (video) {
-            tempCtx.drawImage(video, 0, 0, tempCanvas.height, tempCanvas.width);
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
         } else {
             console.warn("Video feed not found, capturing AR content only.");
         }
