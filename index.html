@@ -49,7 +49,7 @@
     <div id="infoPanel">
         <p>Window: <span id="windowSize"></span></p>
         <p>AR Canvas: <span id="canvasSize"></span></p>
-        <p>Aspect ratio_1: </p>
+        <p>Aspect ratio_2: </p>
     </div>
 
     <script>
@@ -93,27 +93,34 @@
                     const tempCanvas = document.createElement('canvas');
                     const tempCtx = tempCanvas.getContext('2d');
 
-                    // Maintain correct aspect ratio
-                    const arAspectRatio = arCanvas.width / arCanvas.height;
+                    // Use AR canvas dimensions for correct output
+                    tempCanvas.width = arCanvas.width;
+                    tempCanvas.height = arCanvas.height;
 
+                    // Draw the video feed while preserving aspect ratio
                     if (video && video.videoWidth > 0 && video.videoHeight > 0) {
-                        const videoAspectRatio = video.videoWidth / video.videoHeight;
+                        const videoAspect = video.videoWidth / video.videoHeight;
+                        const canvasAspect = tempCanvas.width / tempCanvas.height;
 
-                        if (videoAspectRatio > arAspectRatio) {
-                            // Video is wider than AR content
-                            tempCanvas.width = video.videoWidth;
-                            tempCanvas.height = video.videoWidth / arAspectRatio;
+                        let drawWidth, drawHeight, offsetX, offsetY;
+
+                        if (videoAspect > canvasAspect) {
+                            // Video is wider than canvas, fit height and crop width
+                            drawHeight = tempCanvas.height;
+                            drawWidth = video.videoWidth * (drawHeight / video.videoHeight);
+                            offsetX = (tempCanvas.width - drawWidth) / 2;
+                            offsetY = 0;
                         } else {
-                            // Video is taller than AR content
-                            tempCanvas.width = video.videoHeight * arAspectRatio;
-                            tempCanvas.height = video.videoHeight;
+                            // Video is taller than canvas, fit width and crop height
+                            drawWidth = tempCanvas.width;
+                            drawHeight = video.videoHeight * (drawWidth / video.videoWidth);
+                            offsetX = 0;
+                            offsetY = (tempCanvas.height - drawHeight) / 2;
                         }
 
-                        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                        tempCtx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
                     } else {
                         console.warn("Video feed not found or not ready, capturing AR content only.");
-                        tempCanvas.width = arCanvas.width;
-                        tempCanvas.height = arCanvas.height;
                     }
 
                     // Ensure AR content is properly rendered before drawing it
@@ -129,6 +136,7 @@
                     alert("Failed to take screenshot. Check the console for details.");
                 }
             }
+
 
 
 
