@@ -49,7 +49,7 @@
     <div id="infoPanel">
         <p>Window: <span id="windowSize"></span></p>
         <p>AR Canvas: <span id="canvasSize"></span></p>
-        <p>Aspect ratio_3: </p>
+        <p>Aspect ratio_4: </p>
     </div>
 
     <script>
@@ -80,8 +80,9 @@
             // Update on window resize
             window.addEventListener('resize', updateDimensions);
 
-            function takeScreenshot() {
+            function takeScreenshot() { 
                 try {
+                    const scaleFactor = 2;// Increase scale by 1.5x (adjust as needed)
                     const renderer = scene.renderer;
                     const video = document.querySelector('video');
 
@@ -97,6 +98,16 @@
                     tempCanvas.width = arCanvas.width;
                     tempCanvas.height = arCanvas.height;
 
+                    // Temporarily scale the 3D object
+                    const originalScale = scene.object3D.scale.clone(); // Save original scale
+                    scene.object3D.scale.multiplyScalar(scaleFactor);   // Increase scale
+
+                    // Render the AR scene with increased scale
+                    renderer.render(scene.object3D, scene.camera);
+
+                    // Reset scale after rendering
+                    scene.object3D.scale.copy(originalScale);
+
                     // Draw the video feed while preserving aspect ratio
                     if (video && video.videoWidth > 0 && video.videoHeight > 0) {
                         const videoAspect = video.videoWidth / video.videoHeight;
@@ -105,13 +116,11 @@
                         let drawWidth, drawHeight, offsetX, offsetY;
 
                         if (videoAspect > canvasAspect) {
-                            // Video is wider than canvas, fit height and crop width
                             drawHeight = tempCanvas.height;
                             drawWidth = video.videoWidth * (drawHeight / video.videoHeight);
                             offsetX = (tempCanvas.width - drawWidth) / 2;
                             offsetY = 0;
                         } else {
-                            // Video is taller than canvas, fit width and crop height
                             drawWidth = tempCanvas.width;
                             drawHeight = video.videoHeight * (drawWidth / video.videoWidth);
                             offsetX = 0;
@@ -123,8 +132,7 @@
                         console.warn("Video feed not found or not ready, capturing AR content only.");
                     }
 
-                    // Render AR content **at exact size** without scaling down
-                    renderer.render(scene.object3D, scene.camera);
+                    // Draw the AR content with the scaled-up object
                     tempCtx.drawImage(arCanvas, 0, 0, arCanvas.width, arCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height);
 
                     // Convert to image and download
