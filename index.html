@@ -49,7 +49,7 @@
     <div id="infoPanel">
         <p>Window: <span id="windowSize"></span></p>
         <p>AR Canvas: <span id="canvasSize"></span></p>
-        <p>AR position changed 11: </p>
+        <p>Aspect ratio_1: </p>
     </div>
 
     <script>
@@ -81,42 +81,55 @@
             window.addEventListener('resize', updateDimensions);
 
             function takeScreenshot() {
-    try {
-        const renderer = scene.renderer;
-        const video = document.querySelector('video');
+                try {
+                    const renderer = scene.renderer;
+                    const video = document.querySelector('video');
 
-        if (!renderer) {
-            throw new Error("Renderer not initialized.");
-        }
+                    if (!renderer) {
+                        throw new Error("Renderer not initialized.");
+                    }
 
-        const arCanvas = renderer.domElement;
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
+                    const arCanvas = renderer.domElement;
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
 
-        // Use the AR canvas size to maintain correct aspect ratio
-        tempCanvas.width = arCanvas.height;
-        tempCanvas.height = arCanvas.width;
+                    // Maintain correct aspect ratio
+                    const arAspectRatio = arCanvas.width / arCanvas.height;
 
-        // Capture video frame if available
-        if (video) {
-            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
-        } else {
-            console.warn("Video feed not found, capturing AR content only.");
-        }
+                    if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+                        const videoAspectRatio = video.videoWidth / video.videoHeight;
 
-        // Ensure AR content is properly rendered before drawing it
-        renderer.render(scene.object3D, scene.camera);
-        tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                        if (videoAspectRatio > arAspectRatio) {
+                            // Video is wider than AR content
+                            tempCanvas.width = video.videoWidth;
+                            tempCanvas.height = video.videoWidth / arAspectRatio;
+                        } else {
+                            // Video is taller than AR content
+                            tempCanvas.width = video.videoHeight * arAspectRatio;
+                            tempCanvas.height = video.videoHeight;
+                        }
 
-        // Convert to image and download
-        const imgData = tempCanvas.toDataURL('image/png');
-        downloadImage(imgData);
+                        tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                    } else {
+                        console.warn("Video feed not found or not ready, capturing AR content only.");
+                        tempCanvas.width = arCanvas.width;
+                        tempCanvas.height = arCanvas.height;
+                    }
 
-    } catch (error) {
-        console.error("Error taking screenshot:", error);
-        alert("Failed to take screenshot. Check the console for details.");
-    }
-}
+                    // Ensure AR content is properly rendered before drawing it
+                    renderer.render(scene.object3D, scene.camera);
+                    tempCtx.drawImage(arCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+
+                    // Convert to image and download
+                    const imgData = tempCanvas.toDataURL('image/png');
+                    downloadImage(imgData);
+
+                } catch (error) {
+                    console.error("Error taking screenshot:", error);
+                    alert("Failed to take screenshot. Check the console for details.");
+                }
+            }
+
 
 
             function downloadImage(imgData) {
